@@ -1,0 +1,15 @@
+version: 2
+updates:
+  # Workflows and action.yml pin actions to commits; this keeps them current.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    # Skip releases younger than a week: a hijacked release is usually
+    # caught and pulled within days.
+    cooldown:
+      default-days: 7
+    groups:
+      github-actions:
+        patterns:
+          - "*"
