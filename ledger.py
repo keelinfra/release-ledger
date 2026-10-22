@@ -36,6 +36,27 @@ OSV_BATCH = 1000
 # --- HTTP ------------------------------------------------------------------
 
 
+class _SameHostAuth(urllib.request.HTTPRedirectHandler):
+    """Follow redirects, but send the token only to the host it was meant for.
+
+    urllib copies every header onto the redirected request, so a release asset
+    download (api.github.com answers with a redirect to a storage host) would
+    hand the token to that storage host.
+    """
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        new = super().redirect_request(req, fp, code, msg, headers, newurl)
+        if new is not None:
+            old_url = urllib.parse.urlsplit(req.full_url)
+            new_url = urllib.parse.urlsplit(new.full_url)
+            if (old_url.scheme, old_url.netloc) != (new_url.scheme, new_url.netloc):
+                new.remove_header("Authorization")
+        return new
+
+
+_opener = urllib.request.build_opener(_SameHostAuth)
+
+
 def http(url, data=None, token=None, accept="application/json", method=None):
     """Return the response body as bytes."""
     headers = {"User-Agent": USER_AGENT, "Accept": accept}
@@ -46,7 +67,7 @@ def http(url, data=None, token=None, accept="application/json", method=None):
         body = json.dumps(data).encode()
         headers["Content-Type"] = "application/json"
     req = urllib.request.Request(url, data=body, headers=headers, method=method)
-    with urllib.request.urlopen(req, timeout=60) as resp:
+    with _opener.open(req, timeout=60) as resp:
         return resp.read()
 
 
