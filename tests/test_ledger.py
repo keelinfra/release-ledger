@@ -874,5 +874,49 @@ class ScriptTest(unittest.TestCase):
         self.assertEqual(self.run_script("sbom-check", sbom), (0, f"{sbom}: ok\n"))
 
 
+class RedirectTest(unittest.TestCase):
+    """The token goes to the host it was meant for, never to a redirect target."""
+
+    def auth_seen_after_redirect(self, target_host):
+        import http.server
+        import threading
+
+        seen = {}
+
+        class Handler(http.server.BaseHTTPRequestHandler):
+            # /asset answers like the GitHub API does for a release asset: a
+            # redirect to the storage host, which serves the bytes.
+            def do_GET(self):
+                if self.path == "/asset":
+                    port = self.server.server_port
+                    self.send_response(302)
+                    self.send_header("Location", f"http://{target_host}:{port}/blob")
+                    self.end_headers()
+                    return
+                seen["auth"] = self.headers.get("Authorization")
+                self.send_response(200)
+                self.end_headers()
+                self.wfile.write(b"asset")
+
+            def log_message(self, *args):
+                pass
+
+        server = http.server.HTTPServer(("127.0.0.1", 0), Handler)
+        threading.Thread(target=server.serve_forever, daemon=True).start()
+        self.addCleanup(server.server_close)
+        self.addCleanup(server.shutdown)
+        body = ledger.http(
+            f"http://127.0.0.1:{server.server_port}/asset", token="SECRET"
+        )
+        self.assertEqual(body, b"asset")
+        return seen["auth"]
+
+    def test_token_not_sent_to_another_host(self):
+        self.assertIsNone(self.auth_seen_after_redirect("localhost"))
+
+    def test_token_kept_on_the_same_host(self):
+        self.assertEqual(self.auth_seen_after_redirect("127.0.0.1"), "Bearer SECRET")
+
+
 if __name__ == "__main__":
     unittest.main()
