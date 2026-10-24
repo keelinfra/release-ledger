@@ -80,7 +80,10 @@ def get(path, params=None, ok404=False):
         except urllib.error.HTTPError as e:
             if e.code == 404 and ok404:
                 return None
-            if e.code in (403, 429):
+            limited = e.code == 429 or e.headers.get("X-RateLimit-Remaining") == "0" or e.headers.get("Retry-After")
+            if e.code == 403 and not limited:
+                raise  # e.g. a repo this token may not read: skip it, don't wait
+            if limited:
                 reset = int(e.headers.get("X-RateLimit-Reset", "0"))
                 retry = int(e.headers.get("Retry-After", "0"))
                 wait = max(retry, reset - time.time(), 30) + 5
@@ -257,23 +260,30 @@ def main():
             row["stars"] = stars.get(name)
             rows.append(row)
             print(f"{len(rows):3d} {name}: {row['verdict']}", flush=True)
+            if len(rows) % 25 == 0:
+                write(args.out, rows, stars, skipped)
         else:
             skipped[name] = why
-    os.makedirs(args.out, exist_ok=True)
-    with open(os.path.join(args.out, "results.json"), "w") as f:
-        json.dump({"date": NOW.isoformat(), "rows": rows, "skipped": skipped, "api_calls": calls}, f, indent=1)
-    with open(os.path.join(args.out, "results.csv"), "w", newline="") as f:
-        w = csv.DictWriter(f, fieldnames=list(rows[0].keys()) if rows else ["repo"])
-        w.writeheader()
-        w.writerows(rows)
-    summary = summarize(rows, stars, skipped) if rows else "no rows\n"
-    with open(os.path.join(args.out, "summary.md"), "w") as f:
-        f.write(summary)
+    summary = write(args.out, rows, stars, skipped)
     print(summary)
     print(f"API calls: {calls}")
     if os.environ.get("GITHUB_STEP_SUMMARY"):
         with open(os.environ["GITHUB_STEP_SUMMARY"], "a") as f:
             f.write(summary)
+
+
+def write(out, rows, stars, skipped):
+    os.makedirs(out, exist_ok=True)
+    with open(os.path.join(out, "results.json"), "w") as f:
+        json.dump({"date": NOW.isoformat(), "rows": rows, "skipped": skipped, "api_calls": calls}, f, indent=1)
+    with open(os.path.join(out, "results.csv"), "w", newline="") as f:
+        w = csv.DictWriter(f, fieldnames=list(rows[0].keys()) if rows else ["repo"])
+        w.writeheader()
+        w.writerows(rows)
+    summary = summarize(rows, stars, skipped) if rows else "no rows\n"
+    with open(os.path.join(out, "summary.md"), "w") as f:
+        f.write(summary)
+    return summary
 
 
 if __name__ == "__main__":
