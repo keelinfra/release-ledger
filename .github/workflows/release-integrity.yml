@@ -1,0 +1,39 @@
+name: release-integrity
+# Monthly research scan: can the files in popular CLI projects' latest GitHub
+# release be swapped without a verifiable trace? See research/release-integrity.
+on:
+  schedule:
+    - cron: "41 5 3 * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write   # commit the month's results
+  actions: write    # keep this schedule from being disabled after 60 quiet days
+
+concurrency: release-integrity
+
+jobs:
+  scan:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+      - name: Scan
+        working-directory: research/release-integrity
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          day=$(date -u +%F)
+          python3 scan.py --out "results/$day" --trend results/trend.csv
+      - name: Commit results
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898+github-actions[bot]@users.noreply.github.com"
+          git add research/release-integrity/results
+          git diff --cached --quiet && exit 0
+          git commit -m "release-integrity: results $(date -u +%F) [skip ci]"
+          git push origin "HEAD:$GITHUB_REF_NAME"
+      - name: Keep the schedule enabled
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api -X PUT "repos/$GITHUB_REPOSITORY/actions/workflows/release-integrity.yml/enable"

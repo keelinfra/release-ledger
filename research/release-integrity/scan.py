@@ -240,6 +240,7 @@ def main():
     p.add_argument("--target", type=int, default=300)
     p.add_argument("--max-age-days", type=int, default=365)
     p.add_argument("--out", default=".")
+    p.add_argument("--trend", help="append one line of totals to this CSV")
     args = p.parse_args()
 
     if args.repos:
@@ -265,11 +266,30 @@ def main():
         else:
             skipped[name] = why
     summary = write(args.out, rows, stars, skipped)
+    if args.trend and rows:
+        append_trend(args.trend, rows, len(names))
     print(summary)
     print(f"API calls: {calls}")
     if os.environ.get("GITHUB_STEP_SUMMARY"):
         with open(os.environ["GITHUB_STEP_SUMMARY"], "a") as f:
             f.write(summary)
+
+
+TREND_FIELDS = ["date", "candidates", "scanned", "immutable", "provenance", "signed",
+                "checksums only", "nothing", "swappable"]
+
+
+def append_trend(path, rows, candidates):
+    """One line per run, so the share can be followed month to month."""
+    count = {v: sum(1 for r in rows if r["verdict"] == v) for v in TREND_FIELDS[3:8]}
+    line = {"date": NOW.date().isoformat(), "candidates": candidates, "scanned": len(rows), **count,
+            "swappable": count["checksums only"] + count["nothing"]}
+    new = not os.path.exists(path)
+    with open(path, "a", newline="") as f:
+        w = csv.DictWriter(f, fieldnames=TREND_FIELDS)
+        if new:
+            w.writeheader()
+        w.writerow(line)
 
 
 def write(out, rows, stars, skipped):
