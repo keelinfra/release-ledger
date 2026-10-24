@@ -1,0 +1,30 @@
+name: release-integrity-scan
+# Research: can the files in popular CLI projects' latest GitHub release be
+# swapped without a verifiable trace? Runs only on this research branch and
+# commits results back to it.
+on:
+  push:
+    branches: [claude/project-thread-t54f57]
+    paths: [research/release-integrity/scan.py, .github/workflows/release-integrity-scan.yml]
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency: release-integrity-scan
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+      - name: Scan
+        working-directory: research/release-integrity
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python3 scan.py --out results
+      - name: Commit results
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898+github-actions[bot]@users.noreply.github.com"
+          git add research/release-integrity/results
+          git commit -m "release-integrity scan results $(date -u +%F) [skip ci]"
+          git push origin HEAD:${GITHUB_REF_NAME}
