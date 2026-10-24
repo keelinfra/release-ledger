@@ -17,4 +17,4 @@ fixes ship in a new release, free for everyone, with a GitHub security advisory.
 
 Every release carries its own `cra-evidence.json`, SBOM and signed attestations,
 recorded by this action. How keelinfra handles the EU Cyber Resilience Act:
-[keelinfra/keycloak CRA.md](https://github.com/keelinfra/keycloak/blob/main/CRA.md).
+[keelinfra.io/security](https://keelinfra.io/security/#cyber-resilience-act).
