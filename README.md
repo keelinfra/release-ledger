@@ -18,7 +18,7 @@ release-ledger is two GitHub Actions:
   or [ENISA's EUVD](https://euvd.enisa.europa.eu). The issue carries the Article 14 checklist:
   24-hour early warning, 72-hour notification, final report.
 
-A hosted service is in development: every shipped version watched for its whole support
+A hosted service is planned: every shipped version watched for its whole support
 period, alerts by email, a drafted Article 14 report and an EU evidence archive. Join the
 waitlist at [keelinfra.io/cra](https://keelinfra.io/cra/).
 
@@ -124,5 +124,4 @@ python3 ledger.py monitor --sbom bom.json --version 1.2.0
 
 ## License
 
-Apache License 2.0. Built by [keelinfra](https://keelinfra.io), which records its own releases
-with it.
+Apache License 2.0. Built by [keelinfra](https://keelinfra.io).
