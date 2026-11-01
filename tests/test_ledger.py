@@ -584,6 +584,24 @@ class FeedsTest(ServerTest):
         self.assertIn("CVE-2025-0001", got)
         self.assertEqual(len(self.api.requests), 2)
 
+    def test_euvd_search_stops_at_total(self):
+        # The default EUVD_URL already carries a query string.
+        first = [{"aliases": f"CVE-2024-{i:04d}"} for i in range(100)]
+        self.api.routes[("GET", "/euvd?exploited=true&size=100&page=0")] = (
+            200,
+            {"items": first, "total": 200},
+        )
+        self.api.routes[("GET", "/euvd?exploited=true&size=100&page=1")] = (
+            200,
+            {
+                "items": [{"aliases": f"CVE-2025-{i:04d}"} for i in range(100)],
+                "total": 200,
+            },
+        )
+        got = ledger.load_euvd(self.api.url + "/euvd?exploited=true")
+        self.assertEqual(len(got), 200)
+        self.assertEqual(len(self.api.requests), 2)
+
     def test_osv_batches(self):
         def querybatch(req):
             results = []

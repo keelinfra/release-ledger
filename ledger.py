@@ -28,7 +28,9 @@ USER_AGENT = "keelinfra-release-ledger/1 (+https://github.com/keelinfra/release-
 GITHUB_API = os.environ.get("GITHUB_API_URL", "https://api.github.com")
 OSV_API = "https://api.osv.dev/v1"
 KEV_URL = "https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json"
-EUVD_URL = "https://euvdservices.enisa.europa.eu/api/exploitedvulnerabilities"
+# /api/exploitedvulnerabilities returns only the newest few entries whatever
+# page and size say; the search endpoint pages through all of them.
+EUVD_URL = "https://euvdservices.enisa.europa.eu/api/search?exploited=true"
 ENISA_SRP = "https://portal.cra-srp.enisa.europa.eu"
 OSV_BATCH = 1000
 
@@ -253,15 +255,18 @@ def load_kev(url):
 def load_euvd(url):
     """CVE id -> EUVD entry, for vulnerabilities ENISA lists as exploited."""
     out = {}
-    page = 0
+    sep = "&" if "?" in url else "?"
+    page = seen = 0
     while True:
-        data = http_json(f"{url}?size=100&page={page}")
+        data = http_json(f"{url}{sep}size=100&page={page}")
         items = data if isinstance(data, list) else data.get("items", [])
         for item in items:
             for alias in (item.get("aliases") or "").split():
                 if alias.startswith("CVE-"):
                     out[alias] = item
-        if isinstance(data, list) or len(items) < 100:
+        seen += len(items)
+        total = None if isinstance(data, list) else data.get("total")
+        if isinstance(data, list) or len(items) < 100 or (total and seen >= total):
             return out
         page += 1
 
