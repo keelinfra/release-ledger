@@ -1,4 +1,4 @@
-<a href="https://keelinfra.io/cra/">
+<a href="https://keelinfra.io/security/">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset=".github/readme/hero-dark.svg">
     <img alt="release-ledger, evidence for the EU Cyber Resilience Act: record runs when a release is published and attaches an SBOM, cra-evidence.json and signed attestations; monitor runs daily, checks every supported release against OSV, and opens an issue with the Article 14 checklist (24-hour warning, 72-hour notification, final report) when CISA KEV or ENISA EUVD lists a vulnerability as actively exploited." src=".github/readme/hero-light.svg" width="100%">
@@ -16,7 +16,7 @@
   <a href="#record-each-release"><b>Record each release</b></a> &nbsp;·&nbsp;
   <a href="#watch-every-supported-release"><b>Watch every supported release</b></a> &nbsp;·&nbsp;
   <a href="#what-it-does-not-do"><b>What it does not do</b></a> &nbsp;·&nbsp;
-  <a href="https://keelinfra.io/cra/"><b>keelinfra.io</b></a>
+  <a href="https://keelinfra.io/security/"><b>keelinfra.io</b></a>
 </p>
 
 <br>
@@ -34,6 +34,9 @@ release-ledger is two GitHub Actions:
 
 - **record** runs when you publish a release. It attaches an SBOM and a `cra-evidence.json` to the release, and signs build-provenance and SBOM attestations for your release files.
 - **monitor** runs daily. It checks every release still inside its support period against [OSV](https://osv.dev), and opens an issue when a vulnerability in one of them is listed as actively exploited by [CISA KEV](https://www.cisa.gov/known-exploited-vulnerabilities-catalog) or [ENISA's EUVD](https://euvd.enisa.europa.eu). The issue carries the Article 14 checklist: 24-hour early warning, 72-hour notification, final report.
+
+> [!NOTE]
+> **Maintenance mode since 25 November 2026.** Bug and security fixes are released; no new features and no hosted service. Fixes are welcome as issues or pull requests.
 
 > [!TIP]
 > Standard library Python, no dependencies to install. The only action it calls is GitHub's own [`actions/attest`](https://github.com/actions/attest), pinned to a commit.
@@ -57,7 +60,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       # ... build your release files into dist/ ...
-      - uses: keelinfra/release-ledger@<commit sha>  # v0.1.0
+      - uses: keelinfra/release-ledger@<commit sha>  # v0.1.1
         with:
           support-until: "2031-12-31"
           subject-path: dist/*
@@ -110,7 +113,7 @@ jobs:
   monitor:
     runs-on: ubuntu-latest
     steps:
-      - uses: keelinfra/release-ledger/monitor@<commit sha>  # v0.1.0
+      - uses: keelinfra/release-ledger/monitor@<commit sha>  # v0.1.1
 ```
 
 The job summary lists each supported release, how many packages were checked, and how many known and actively exploited vulnerabilities it has. The step fails when one is actively exploited (`fail-on: exploited`, or `any`, or `never`), and opens one issue per vulnerability and release, labelled `cra`.
@@ -129,12 +132,13 @@ python3 ledger.py monitor --sbom bom.json --version 1.2.0
 - A vulnerability in your dependencies is not always exploitable in your product. The issue starts that assessment; the 24-hour clock starts when you are reasonably sure you are affected.
 - KEV and EUVD are lists of known exploitation, not complete ones.
 - Only packages with an exact version can be checked; the summary shows how many were.
+- GitHub turns off scheduled workflows in a public repository after 60 days without activity. If your repository goes quiet, check that the monitor workflow is still enabled.
 
 ## Get involved
 
 Bug reports and questions: [open an issue](https://github.com/keelinfra/release-ledger/issues). Security reports go through [SECURITY.md](SECURITY.md).
 
-A hosted version is planned: every shipped version watched for its whole support period, alerts by email, a drafted Article 14 report and an EU evidence archive. [keelinfra.io/cra](https://keelinfra.io/cra/) has the details and a waitlist.
+The project is in maintenance mode: bugs and security issues get fixed and released, feature requests are closed with a note. The hosted version that was planned is not being built.
 
 ## License
 
